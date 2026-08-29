@@ -231,10 +231,8 @@ PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAP
       <Navbar
         user={user}
         onOpenUpload={() => setIsUploadOpen(true)}
-        onLoadSample={loadSampleData}
         onExportCsv={handleExportCsv}
         onLogout={handleLogout}
-        isLoadingSample={isLoadingSample}
       />
 
       <main className="max-w-7xl mx-auto px-6 pt-6 space-y-6">
@@ -359,7 +357,6 @@ PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAP
           fetchRuns();
           loadRunDetails(runId);
         }}
-        onLoadSampleDemo={loadSampleData}
       />
 
       {/* Scope-Restricted Token-Efficient AI Audit Assistant Chat */}

@@ -1,20 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, Sparkles, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface DataIngestionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onIngestSuccess: (runId: string) => void;
-  onLoadSampleDemo: () => void;
 }
 
 export const DataIngestionModal: React.FC<DataIngestionModalProps> = ({
   isOpen,
   onClose,
   onIngestSuccess,
-  onLoadSampleDemo,
 }) => {
   const [ordersFile, setOrdersFile] = useState<File | null>(null);
   const [paymentsFile, setPaymentsFile] = useState<File | null>(null);
@@ -99,7 +97,7 @@ export const DataIngestionModal: React.FC<DataIngestionModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="e.g. Q3 August 2026 Audit Batch"
+              placeholder="e.g. August 2026 Audit Batch"
               value={batchName}
               onChange={(e) => setBatchName(e.target.value)}
               className="w-full px-3.5 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500"
@@ -168,29 +166,17 @@ export const DataIngestionModal: React.FC<DataIngestionModalProps> = ({
             </div>
           </div>
 
-          {/* Preset Demo Quick Action */}
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => {
-                onLoadSampleDemo();
-                onClose();
-              }}
-              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center space-x-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Or Load Preset Demo Datasets</span>
-            </button>
-
+          {/* Action Footer */}
+          <div className="pt-2 border-t border-slate-800 flex justify-end">
             <button
               type="submit"
               disabled={isUploading || !ordersFile || !paymentsFile}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/30 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/30 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isUploading ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Reconciling...</span>
+                  <span>Reconciling Datasets...</span>
                 </>
               ) : (
                 <>

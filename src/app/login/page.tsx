@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldAlert, ArrowRight, Lock, Mail, User as UserIcon, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, ArrowRight, Lock, Mail, User as UserIcon } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,43 +41,6 @@ export default function LoginPage() {
     }
   };
 
-  // Demo 1-Click Auditor Login
-  const handleDemoLogin = async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      // First try login with demo account
-      let res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'demo@ledgerpulse.com', password: 'demo-auditor-pass' }),
-      });
-
-      if (!res.ok) {
-        // If demo user doesn't exist yet, auto-register
-        res = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: 'demo@ledgerpulse.com',
-            password: 'demo-auditor-pass',
-            name: 'Senior Financial Auditor',
-          }),
-        });
-      }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Demo access failed');
-
-      router.push('/');
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Demo login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background glow graphics */}
@@ -94,7 +57,7 @@ export default function LoginPage() {
             LedgerPulse
           </h1>
           <p className="text-xs text-slate-400 mt-1 font-medium">
-            E-Commerce Deterministic Reconciliation Engine
+            Revenue Reconciliation & Audit Suite
           </p>
         </div>
 
@@ -179,25 +142,10 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
             >
-              <span>{isSignup ? 'Create Account' : 'Sign In to Dashboard'}</span>
+              <span>{isSignup ? 'Create Account' : 'Sign In'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Quick Demo Access Button */}
-          <div className="mt-6 pt-6 border-t border-slate-800">
-            <button
-              onClick={handleDemoLogin}
-              disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-indigo-950/70 hover:bg-indigo-900/70 border border-indigo-700/50 rounded-xl text-indigo-300 text-xs font-semibold transition-all flex items-center justify-center space-x-2 shadow-sm"
-            >
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span>1-Click Demo Auditor Sign In</span>
-            </button>
-            <p className="text-[10px] text-center text-slate-500 mt-2">
-              Instantly log in to evaluate the pre-loaded e-commerce reconciliation suite
-            </p>
-          </div>
         </div>
       </div>
     </main>

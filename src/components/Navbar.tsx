@@ -1,24 +1,20 @@
 'use client';
 
 import React from 'react';
-import { ShieldAlert, Upload, Sparkles, LogOut, User as UserIcon, RefreshCw, Download } from 'lucide-react';
+import { ShieldAlert, Upload, LogOut, User as UserIcon, Download } from 'lucide-react';
 
 interface NavbarProps {
   user: { email: string; name?: string } | null;
   onOpenUpload: () => void;
-  onLoadSample: () => void;
   onLogout: () => void;
   onExportCsv?: () => void;
-  isLoadingSample?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   user,
   onOpenUpload,
-  onLoadSample,
   onLogout,
   onExportCsv,
-  isLoadingSample,
 }) => {
   return (
     <header className="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-6 py-3.5">
@@ -48,20 +44,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Export Audit CSV</span>
             </button>
           )}
-
-          <button
-            onClick={onLoadSample}
-            disabled={isLoadingSample}
-            className="flex items-center space-x-2 px-3.5 py-2 text-xs font-semibold text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-700/50 rounded-lg transition-all shadow-sm hover:shadow-indigo-900/20 disabled:opacity-50"
-            title="Ingest pre-configured e-commerce test dataset"
-          >
-            {isLoadingSample ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            )}
-            <span>{isLoadingSample ? 'Processing...' : 'Load Sample Demo'}</span>
-          </button>
 
           <button
             onClick={onOpenUpload}
