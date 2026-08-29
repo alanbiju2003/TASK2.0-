@@ -6,10 +6,11 @@ import { Navbar } from '@/components/Navbar';
 import { KpiCards } from '@/components/KpiCards';
 import { DiscrepancyCharts } from '@/components/DiscrepancyCharts';
 import { DrillDownTable, Discrepancy } from '@/components/DrillDownTable';
+import { RawOrdersTable, RawPaymentsTable, RawOrderRecord, RawPaymentRecord } from '@/components/RawDataTables';
 import { AiExplanationModal } from '@/components/AiExplanationModal';
 import { DataIngestionModal } from '@/components/DataIngestionModal';
 import { AiAssistantChat } from '@/components/AiAssistantChat';
-import { AlertOctagon, Sparkles, RefreshCw, Upload, FileText, ChevronDown } from 'lucide-react';
+import { AlertOctagon, Sparkles, RefreshCw, Upload, FileText, FileSpreadsheet, CreditCard, ShieldAlert } from 'lucide-react';
 
 interface RunSummary {
   id: string;
@@ -38,10 +39,16 @@ export default function DashboardPage() {
   const [currentRun, setCurrentRun] = useState<FullRunData | null>(null);
   const [isLoadingRun, setIsLoadingRun] = useState(false);
 
+  // Tab State: DISCREPANCIES | ORDERS_CSV | PAYMENTS_CSV
+  const [activeTab, setActiveTab] = useState<'DISCREPANCIES' | 'ORDERS_CSV' | 'PAYMENTS_CSV'>('DISCREPANCIES');
+  const [rawOrders, setRawOrders] = useState<RawOrderRecord[]>([]);
+  const [rawPayments, setRawPayments] = useState<RawPaymentRecord[]>([]);
+  const [isLoadingRaw, setIsLoadingRaw] = useState(false);
+
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<Discrepancy | null>(null);
 
-  // 1. Verify User Authentication Session
+  // 1. Verify Session
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -61,7 +68,7 @@ export default function DashboardPage() {
     checkAuth();
   }, [router]);
 
-  // 2. Fetch User's Reconciliation Runs
+  // 2. Fetch Reconciliation Runs
   const fetchRuns = async () => {
     try {
       const res = await fetch('/api/reconcile/run');
@@ -77,13 +84,38 @@ export default function DashboardPage() {
     }
   };
 
+  // 3. Fetch Raw Database Datasets (orders.csv & payments.csv)
+  const fetchRawData = async () => {
+    setIsLoadingRaw(true);
+    try {
+      const [resOrders, resPayments] = await Promise.all([
+        fetch('/api/raw/orders'),
+        fetch('/api/raw/payments'),
+      ]);
+
+      if (resOrders.ok) {
+        const dataOrders = await resOrders.json();
+        setRawOrders(dataOrders.orders || []);
+      }
+      if (resPayments.ok) {
+        const dataPayments = await resPayments.json();
+        setRawPayments(dataPayments.payments || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch raw datasets:', err);
+    } finally {
+      setIsLoadingRaw(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchRuns();
+      fetchRawData();
     }
   }, [user]);
 
-  // 3. Load Details for Selected Run
+  // 4. Load Details for Selected Run
   const loadRunDetails = async (runId: string) => {
     setIsLoadingRun(true);
     try {
@@ -105,7 +137,7 @@ export default function DashboardPage() {
     }
   }, [selectedRunId]);
 
-  // 4. Update Discrepancy Audit Status
+  // 5. Update Discrepancy Audit Status
   const handleUpdateStatus = async (id: string, newStatus: Discrepancy['status']) => {
     try {
       const res = await fetch(`/api/discrepancies/${id}`, {
@@ -129,7 +161,7 @@ export default function DashboardPage() {
     }
   };
 
-  // 5. Export CSV Report
+  // 6. Export CSV Report
   const handleExportCsv = () => {
     if (!currentRun || !currentRun.discrepancies || currentRun.discrepancies.length === 0) return;
 
@@ -224,6 +256,45 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Tab Navigation Switcher */}
+        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-2">
+          <button
+            onClick={() => setActiveTab('DISCREPANCIES')}
+            className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 ${
+              activeTab === 'DISCREPANCIES'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4" />
+            <span>Audit Discrepancies ({currentRun?.discrepancies?.length || 0})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ORDERS_CSV')}
+            className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 ${
+              activeTab === 'ORDERS_CSV'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Store Orders Dataset (`orders.csv` - {rawOrders.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('PAYMENTS_CSV')}
+            className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 ${
+              activeTab === 'PAYMENTS_CSV'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Gateway Payments Dataset (`payments.csv` - {rawPayments.length})</span>
+          </button>
+        </div>
+
         {/* Empty State Banner if no dataset uploaded */}
         {(!currentRun || currentRun.totalOrdersCount === 0) && !isLoadingRun && (
           <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-sm">
@@ -254,8 +325,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Active Audit Content */}
-        {currentRun && !isLoadingRun && currentRun.totalOrdersCount > 0 && (
+        {/* Tab 1: Audit Discrepancies View */}
+        {activeTab === 'DISCREPANCIES' && currentRun && !isLoadingRun && currentRun.totalOrdersCount > 0 && (
           <>
             {/* 1. Headline Figure KPI Cards */}
             <KpiCards
@@ -279,6 +350,16 @@ export default function DashboardPage() {
             />
           </>
         )}
+
+        {/* Tab 2: Raw Store Orders Dataset View (`orders.csv`) */}
+        {activeTab === 'ORDERS_CSV' && (
+          <RawOrdersTable orders={rawOrders} />
+        )}
+
+        {/* Tab 3: Raw Gateway Payments Dataset View (`payments.csv`) */}
+        {activeTab === 'PAYMENTS_CSV' && (
+          <RawPaymentsTable payments={rawPayments} />
+        )}
       </main>
 
       {/* AI Discrepancy Detail Modal */}
@@ -294,6 +375,7 @@ export default function DashboardPage() {
         onClose={() => setIsUploadOpen(false)}
         onIngestSuccess={(runId) => {
           fetchRuns();
+          fetchRawData();
           loadRunDetails(runId);
         }}
       />
