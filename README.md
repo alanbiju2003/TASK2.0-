@@ -82,26 +82,34 @@ The matching engine is **100% deterministic, repeatable, and rule-based**. An LL
 
 ## What We Discovered in the Data
 
-Analysis of `orders.csv` and `payments.csv` revealed several critical real-world revenue leakage points:
+Analysis of the real 187-row dataset (`orders.csv` and `payments.csv`) revealed **30 exact discrepancy cases** across **$42,296.99 of store orders** and **$42,719.38 of gateway payments**:
 
-1. **Uncollected Revenue ($495.00)**:
-   - `ORD-1004` ($320.00) & `ORD-1005` ($175.00) are completed in the store system, but have **zero payment records** in `payments.csv`. Goods were delivered without capturing payment.
-2. **Customer Double-Charge ($199.99 Overcharge)**:
-   - Order `ORD-1008` ($199.99) had **two separate payments** captured (`PAY-5008A` & `PAY-5008B`), double-charging the customer $399.98 in total.
-3. **Amount Misalignment**:
-   - `ORD-1006` ($500.00) had a payment capture of only $450.00 (`PAY-5006`), resulting in an underpayment of $50.00.
-   - `ORD-1007` ($75.00) had a payment capture of $85.00 (`PAY-5007`), overcharging by $10.00.
-4. **Status Mismatches & Unrefunded Money**:
-   - `ORD-1009` ($120.00) was `CANCELLED` in store, but payment `PAY-5009` remains `CAPTURED` (unrefunded customer money).
-   - `ORD-1010` ($450.00) was marked `REFUNDED` in store, but payment `PAY-5010` is still `SETTLED` in gateway.
-   - `ORD-1011` ($210.00) is `COMPLETED` in store, but payment `PAY-5011` failed (`FAILED`).
-5. **Gateway Fee Leakage ($89.98 Overcharge)**:
-   - Payment `PAY-5012` charged a **$125.00 fee on a $1,000.00 transaction** (12.5% fee vs standard contract rate of ~3.5%), causing profit margin erosion.
-6. **Ghost / Unmatched Gateway Payments ($850.00)**:
-   - `PAY-9999` ($350.00) and `PAY-9998` ($500.00) were captured by the gateway without any matching store order.
-7. **Data Messiness**:
-   - Leading/trailing whitespace (`" ORD-1013 "`).
-   - Case inconsistencies (`"ord-1014"` vs `"ORD-1014"`).
+- **Total Reconciled Value**: **$39,688.55** (93.8% of order revenue verified cleanly)
+- **Total Disputed Value**: **$2,916.44**
+- **Net Money at Risk**: **$1,757.79**
+
+### Detailed Breakdown of Findings & Business Impact
+
+1. **Multi-Currency Mismatches (`CURRENCY_MISMATCH` - 2 items)**:
+   - `ORD-1601` ($210.00) recorded in **USD** in the store database, but charged in **EUR** (`TXN700171`) in the payment processor.
+   - `ORD-1602` (€145.00) recorded in **EUR** in the store database, but charged in **USD** (`TXN700172`) in the payment processor.
+2. **Unrefunded Cancelled Orders & Unpaid Deliveries (`STATUS_MISMATCH` - 2 items, $485.00 Risk)**:
+   - `ORD-1701` ($175.00) is marked `CANCELLED` in the store, but payment `TXN700173` remains `SETTLED` (unrefunded money owed to customer).
+   - `ORD-2001` ($310.00) is marked `COMPLETED` in store, but gateway transaction `TXN700183` is `FAILED` (goods fulfilled without captured funds).
+3. **Duplicate Payment Captures (`DUPLICATE_PAYMENT` - 4 items, $467.58 Overcharge Risk)**:
+   - Single order IDs (`ORD-1502`, `ORD-1702`, `ORD-1703`, `ORD-1501`) each had **two separate payment transactions captured** in `payments.csv`, double-charging customers and triggering chargeback penalties.
+4. **Uncollected Revenue (`UNMATCHED_ORDER` - 4 items, $392.35 Risk)**:
+   - Orders `ORD-1203` ($59.52), `ORD-1201` ($94.87), `ORD-1204` ($157.13), and `ORD-1202` ($80.83) are completed in the store system, but have **zero payment records** in `payments.csv`.
+5. **Ghost / Unallocated Gateway Payments (`UNMATCHED_PAYMENT` - 3 items, $308.00 Risk)**:
+   - `TXN700162` ($78.98), `TXN700161` ($79.51), and `TXN700163` ($149.51) were captured by the gateway without any matching store order.
+6. **Amount Misalignment (`AMOUNT_MISMATCH` - 3 items, $103.50 Risk)**:
+   - Variances between store `net_amount` (after promotional discount) and gateway captured amount.
+7. **Gateway Processing Fee Leakage (`FEE_LEAKAGE` - 12 items)**:
+   - Gateway charged processing fees exceeding the expected contract rate of 3.5% on micro-transactions.
+8. **Data Messiness Handled**:
+   - Spacing anomalies (e.g. `" ord-1801 "`).
+   - Missing fields (e.g. `ORD-2201` missing email).
+   - Mixed date formats (`YYYY-MM-DD HH:mm:ss` vs `DD/MM/YYYY HH:mm`).
 
 ---
 

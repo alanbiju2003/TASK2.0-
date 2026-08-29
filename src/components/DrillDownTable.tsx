@@ -13,6 +13,7 @@ export interface Discrepancy {
   orderAmount?: number | null;
   paymentAmount?: number | null;
   difference: number;
+  currency?: string | null;
   orderStatus?: string | null;
   paymentStatus?: string | null;
   description: string;
@@ -228,10 +229,24 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
                     )}
                   </td>
                   <td className="py-3 px-4 text-right font-medium text-slate-200">
-                    {item.orderAmount != null ? `$${item.orderAmount.toFixed(2)}` : '—'}
+                    {item.orderAmount != null ? (
+                      <span>
+                        ${item.orderAmount.toFixed(2)}{' '}
+                        <span className="text-[10px] text-slate-500 font-mono">USD</span>
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="py-3 px-4 text-right font-medium text-slate-200">
-                    {item.paymentAmount != null ? `$${item.paymentAmount.toFixed(2)}` : '—'}
+                    {item.paymentAmount != null ? (
+                      <span>
+                        ${item.paymentAmount.toFixed(2)}{' '}
+                        <span className="text-[10px] text-slate-500 font-mono">USD</span>
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="py-3 px-4 text-right font-semibold text-rose-400">
                     {item.difference !== 0 ? `$${Math.abs(item.difference).toFixed(2)}` : '$0.00'}
