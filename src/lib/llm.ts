@@ -24,7 +24,7 @@ export interface LLMExplanationOutput {
 export async function explainDiscrepancy(input: LLMExplanationInput): Promise<LLMExplanationOutput> {
   const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || process.env.LLM_API_KEY;
   const baseURL = process.env.LLM_BASE_URL || (process.env.GROQ_API_KEY ? 'https://api.groq.com/openai/v1' : undefined);
-  const model = process.env.LLM_MODEL || (process.env.GROQ_API_KEY ? 'llama-3.1-8b-instant' : 'gpt-4o-mini');
+  const model = process.env.LLM_MODEL || (process.env.GROQ_API_KEY ? 'groq/compound-mini' : 'gpt-4o-mini');
 
   // Fallback engine if no API Key provided
   if (!apiKey || apiKey.trim() === '' || apiKey.includes('sk-proj-...')) {
