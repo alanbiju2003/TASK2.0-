@@ -8,6 +8,7 @@ import { DiscrepancyCharts } from '@/components/DiscrepancyCharts';
 import { DrillDownTable, Discrepancy } from '@/components/DrillDownTable';
 import { AiExplanationModal } from '@/components/AiExplanationModal';
 import { DataIngestionModal } from '@/components/DataIngestionModal';
+import { AiAssistantChat } from '@/components/AiAssistantChat';
 import { AlertOctagon, Sparkles, RefreshCw, Upload, FileText, ChevronDown } from 'lucide-react';
 
 interface RunSummary {
@@ -350,7 +351,7 @@ PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAP
         onUpdateStatus={handleUpdateStatus}
       />
 
-      {/* File Upload Modal */}
+      {/* Data Ingestion File Upload Modal */}
       <DataIngestionModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
@@ -360,6 +361,9 @@ PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAP
         }}
         onLoadSampleDemo={loadSampleData}
       />
+
+      {/* Scope-Restricted Token-Efficient AI Audit Assistant Chat */}
+      <AiAssistantChat runId={currentRun?.id} />
     </div>
   );
 }
