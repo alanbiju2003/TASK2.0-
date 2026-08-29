@@ -1,0 +1,84 @@
+const fs = require('fs');
+const path = require('path');
+
+const sampleDir = path.join(__dirname, '..', 'sample_data');
+if (!fs.existsSync(sampleDir)) {
+  fs.mkdirSync(sampleDir, { recursive: true });
+}
+
+// Generate realistic orders.csv and payments.csv with deliberate real-world messiness
+
+const ordersHeader = "order_id,customer_email,order_date,amount,currency,status,payment_method\n";
+const paymentsHeader = "payment_id,order_id,customer_email,payment_date,amount,currency,status,fee_amount\n";
+
+const orders = [
+  // 1. Perfect Matches
+  "ORD-1001,john.doe@example.com,2026-08-01T10:15:00Z,150.00,USD,COMPLETED,credit_card",
+  "ORD-1002,alice.smith@example.com,2026-08-01T11:20:00Z,89.99,USD,COMPLETED,paypal",
+  "ORD-1003,bob.jones@example.com,2026-08-02T09:00:00Z,245.50,USD,COMPLETED,stripe",
+  
+  // 2. Unmatched Order (Missing Payment in Gateway) - 100% money at risk
+  "ORD-1004,charlie.brown@example.com,2026-08-02T14:30:00Z,320.00,USD,COMPLETED,credit_card",
+  "ORD-1005,diana.prince@example.com,2026-08-03T16:45:00Z,175.00,USD,COMPLETED,credit_card",
+
+  // 3. Amount Mismatches (Underpayment & Overpayment)
+  "ORD-1006,eva.green@example.com,2026-08-04T12:00:00Z,500.00,USD,COMPLETED,stripe",
+  "ORD-1007,frank.miller@example.com,2026-08-04T15:10:00Z,75.00,USD,COMPLETED,paypal",
+
+  // 4. Duplicate Payments (Single order charged twice)
+  "ORD-1008,grace.hopper@example.com,2026-08-05T08:20:00Z,199.99,USD,COMPLETED,credit_card",
+
+  // 5. Status Mismatches (Order cancelled/refunded, but payment captured/settled)
+  "ORD-1009,harry.potter@example.com,2026-08-05T17:00:00Z,120.00,USD,CANCELLED,credit_card",
+  "ORD-1010,ian.fleming@example.com,2026-08-06T10:05:00Z,450.00,USD,REFUNDED,stripe",
+  "ORD-1011,julia.roberts@example.com,2026-08-06T13:40:00Z,210.00,USD,COMPLETED,paypal", // Payment failed
+
+  // 6. Excessive Fee Leakage
+  "ORD-1012,kevin.bacon@example.com,2026-08-07T11:15:00Z,1000.00,USD,COMPLETED,stripe",
+
+  // 7. Case Sensitivity & Space Padding messiness
+  "ORD-1013 , lara.croft@example.com ,2026-08-07T14:00:00Z,85.50,USD,COMPLETED,credit_card",
+  "ord-1014,michael.scott@example.com,2026-08-08T09:30:00Z,130.00,USD,COMPLETED,stripe",
+];
+
+const payments = [
+  // 1. Perfect Matches
+  "PAY-5001,ORD-1001,john.doe@example.com,2026-08-01T10:15:05Z,150.00,USD,CAPTURED,4.65",
+  "PAY-5002,ORD-1002,alice.smith@example.com,2026-08-01T11:20:10Z,89.99,USD,CAPTURED,2.90",
+  "PAY-5003,ORD-1003,bob.jones@example.com,2026-08-02T09:00:15Z,245.50,USD,CAPTURED,7.42",
+
+  // ORD-1004 & ORD-1005 have NO payments in payments.csv (Unmatched Orders)
+
+  // 3. Amount Mismatches
+  "PAY-5006,ORD-1006,eva.green@example.com,2026-08-04T12:00:10Z,450.00,USD,CAPTURED,13.35", // Underpaid by $50
+  "PAY-5007,ORD-1007,frank.miller@example.com,2026-08-04T15:10:05Z,85.00,USD,CAPTURED,2.76", // Overpaid by $10
+
+  // 4. Duplicate Payments for ORD-1008
+  "PAY-5008A,ORD-1008,grace.hopper@example.com,2026-08-05T08:20:00Z,199.99,USD,CAPTURED,6.10",
+  "PAY-5008B,ORD-1008,grace.hopper@example.com,2026-08-05T08:20:02Z,199.99,USD,CAPTURED,6.10", // Duplicate charge!
+
+  // 5. Status Mismatches
+  "PAY-5009,ORD-1009,harry.potter@example.com,2026-08-05T17:00:12Z,120.00,USD,CAPTURED,3.78", // Order cancelled, payment still captured!
+  "PAY-5010,ORD-1010,ian.fleming@example.com,2026-08-06T10:05:20Z,450.00,USD,SETTLED,13.35", // Order refunded, payment settled (unrefunded money)!
+  "PAY-5011,ORD-1011,julia.roberts@example.com,2026-08-06T13:40:05Z,210.00,USD,FAILED,0.00", // Order completed, payment failed!
+
+  // 6. Excessive Fee Leakage (Contract rate ~3%, charged 12.5% = $125.00 fee)
+  "PAY-5012,ORD-1012,kevin.bacon@example.com,2026-08-07T11:15:10Z,1000.00,USD,CAPTURED,125.00",
+
+  // 7. Case Sensitivity & Space Padding
+  "PAY-5013,ORD-1013,lara.croft@example.com,2026-08-07T14:00:02Z,85.50,USD,CAPTURED,2.78",
+  "PAY-5014,ORD-1014,michael.scott@example.com,2026-08-08T09:30:05Z,130.00,USD,CAPTURED,4.07",
+
+  // 8. Unmatched Payments (Ghost captured payment without store order)
+  "PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAPTURED,10.45",
+  "PAY-9998,,ghost.charge@example.com,2026-08-08T19:30:00Z,500.00,USD,CAPTURED,15.00"
+];
+
+fs.writeFileSync(path.join(sampleDir, 'orders.csv'), ordersHeader + orders.join('\n'));
+fs.writeFileSync(path.join(sampleDir, 'payments.csv'), paymentsHeader + payments.join('\n'));
+
+// Also save to root if needed
+fs.writeFileSync(path.join(__dirname, '..', 'orders.csv'), ordersHeader + orders.join('\n'));
+fs.writeFileSync(path.join(__dirname, '..', 'payments.csv'), paymentsHeader + payments.join('\n'));
+
+console.log("Sample datasets successfully generated in sample_data/ and project root!");

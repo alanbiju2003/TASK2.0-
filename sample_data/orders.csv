@@ -1,0 +1,15 @@
+order_id,customer_email,order_date,amount,currency,status,payment_method
+ORD-1001,john.doe@example.com,2026-08-01T10:15:00Z,150.00,USD,COMPLETED,credit_card
+ORD-1002,alice.smith@example.com,2026-08-01T11:20:00Z,89.99,USD,COMPLETED,paypal
+ORD-1003,bob.jones@example.com,2026-08-02T09:00:00Z,245.50,USD,COMPLETED,stripe
+ORD-1004,charlie.brown@example.com,2026-08-02T14:30:00Z,320.00,USD,COMPLETED,credit_card
+ORD-1005,diana.prince@example.com,2026-08-03T16:45:00Z,175.00,USD,COMPLETED,credit_card
+ORD-1006,eva.green@example.com,2026-08-04T12:00:00Z,500.00,USD,COMPLETED,stripe
+ORD-1007,frank.miller@example.com,2026-08-04T15:10:00Z,75.00,USD,COMPLETED,paypal
+ORD-1008,grace.hopper@example.com,2026-08-05T08:20:00Z,199.99,USD,COMPLETED,credit_card
+ORD-1009,harry.potter@example.com,2026-08-05T17:00:00Z,120.00,USD,CANCELLED,credit_card
+ORD-1010,ian.fleming@example.com,2026-08-06T10:05:00Z,450.00,USD,REFUNDED,stripe
+ORD-1011,julia.roberts@example.com,2026-08-06T13:40:00Z,210.00,USD,COMPLETED,paypal
+ORD-1012,kevin.bacon@example.com,2026-08-07T11:15:00Z,1000.00,USD,COMPLETED,stripe
+ORD-1013 , lara.croft@example.com ,2026-08-07T14:00:00Z,85.50,USD,COMPLETED,credit_card
+ord-1014,michael.scott@example.com,2026-08-08T09:30:00Z,130.00,USD,COMPLETED,stripe

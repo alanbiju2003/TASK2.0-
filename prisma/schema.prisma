@@ -1,0 +1,96 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String              @id @default(uuid())
+  email        String              @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  runs         ReconciliationRun[]
+  orders       RawOrder[]
+  payments     RawPayment[]
+}
+
+model RawOrder {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId       String
+  customerEmail String?
+  orderDate     DateTime?
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("COMPLETED")
+  paymentMethod String?
+  rawLine       String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, orderId])
+}
+
+model RawPayment {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentId     String
+  orderIdRef    String?
+  customerEmail String?
+  paymentDate   DateTime?
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("CAPTURED")
+  feeAmount     Float    @default(0.0)
+  rawLine       String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, paymentId])
+  @@index([userId, orderIdRef])
+}
+
+model ReconciliationRun {
+  id                    String        @id @default(uuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String        @default("Reconciliation Batch")
+  totalOrdersCount      Int           @default(0)
+  totalPaymentsCount    Int           @default(0)
+  totalOrdersAmount     Float         @default(0.0)
+  totalPaymentsAmount   Float         @default(0.0)
+  totalReconciledAmount Float         @default(0.0)
+  totalDisputedAmount   Float         @default(0.0)
+  moneyAtRisk           Float         @default(0.0)
+  createdAt             DateTime      @default(now())
+  discrepancies         Discrepancy[]
+}
+
+model Discrepancy {
+  id            String            @id @default(uuid())
+  runId         String
+  run           ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  userId        String
+  type          String // UNMATCHED_ORDER, UNMATCHED_PAYMENT, AMOUNT_MISMATCH, DUPLICATE_PAYMENT, STATUS_MISMATCH, FEE_LEAKAGE, CURRENCY_MISMATCH
+  severity      String // CRITICAL, HIGH, MEDIUM, LOW
+  orderId       String?
+  paymentId     String?
+  customerEmail String?
+  orderAmount   Float?
+  paymentAmount Float?
+  difference    Float             @default(0.0)
+  orderStatus   String?
+  paymentStatus String?
+  description   String
+  status        String            @default("OPEN") // OPEN, IN_REVIEW, RESOLVED, IGNORED
+  aiExplanation String?
+  createdAt     DateTime          @default(now())
+
+  @@index([runId])
+  @@index([userId])
+}
