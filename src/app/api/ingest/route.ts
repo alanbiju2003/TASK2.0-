@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { parseOrdersCSV, parsePaymentsCSV, runReconciliation } from '@/lib/reconciliation';
+import { sendReconciliationAlertEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -116,6 +117,53 @@ export async function POST(req: NextRequest) {
         discrepancies: true,
       },
     });
+
+    // 5. Create System Audit Log Entry
+    const logEntry = await prisma.auditLog.create({
+      data: {
+        userId: userPayload.userId,
+        level: reconSummary.moneyAtRisk > 0 ? 'WARNING' : 'SUCCESS',
+        event: 'RECONCILIATION_RUN_COMPLETED',
+        message: `Reconciliation run "${batchName}" completed. ${reconSummary.discrepancies.length} discrepancies found ($${reconSummary.moneyAtRisk.toFixed(2)} money at risk).`,
+        details: JSON.stringify({
+          runId: run.id,
+          totalOrders: reconSummary.totalOrdersCount,
+          totalPayments: reconSummary.totalPaymentsCount,
+          reconciledAmount: reconSummary.totalReconciledAmount,
+          disputedAmount: reconSummary.totalDisputedAmount,
+          moneyAtRisk: reconSummary.moneyAtRisk,
+        }),
+      },
+    });
+
+    // 6. Trigger Email Alert to alanthomasbiju01@gmail.com if money at risk exists
+    if (reconSummary.moneyAtRisk > 0) {
+      const emailResult = await sendReconciliationAlertEmail({
+        toEmail: process.env.NOTIFICATION_EMAIL || 'alanthomasbiju01@gmail.com',
+        subject: `🚨 [Audit Alert] ${reconSummary.discrepancies.length} Revenue Discrepancies Found ($${reconSummary.moneyAtRisk.toFixed(2)} Risk)`,
+        batchName,
+        totalOrdersCount: reconSummary.totalOrdersCount,
+        totalPaymentsCount: reconSummary.totalPaymentsCount,
+        totalReconciledAmount: reconSummary.totalReconciledAmount,
+        totalDisputedAmount: reconSummary.totalDisputedAmount,
+        moneyAtRisk: reconSummary.moneyAtRisk,
+        discrepanciesCount: reconSummary.discrepancies.length,
+        topDiscrepancies: reconSummary.discrepancies.slice(0, 5),
+      });
+
+      // Save email alert status to AuditLog
+      await prisma.auditLog.create({
+        data: {
+          userId: userPayload.userId,
+          level: emailResult.success ? 'SUCCESS' : 'WARNING',
+          event: 'EMAIL_ALERT_TRIGGERED',
+          message: emailResult.success
+            ? `Reconciliation alert email successfully sent to ${process.env.NOTIFICATION_EMAIL || 'alanthomasbiju01@gmail.com'}`
+            : `Email alert attempt: ${emailResult.message}`,
+          details: JSON.stringify(emailResult),
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

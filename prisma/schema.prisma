@@ -17,6 +17,7 @@ model User {
   runs         ReconciliationRun[]
   orders       RawOrder[]
   payments     RawPayment[]
+  logs         AuditLog[]
 }
 
 model RawOrder {
@@ -92,5 +93,18 @@ model Discrepancy {
   createdAt     DateTime          @default(now())
 
   @@index([runId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level     String   @default("INFO") // INFO, WARNING, CRITICAL, SUCCESS
+  event     String   // e.g. DATASET_INGESTED, EMAIL_ALERT_SENT, STATUS_UPDATED
+  message   String
+  details   String?
+  createdAt DateTime @default(now())
+
   @@index([userId])
 }

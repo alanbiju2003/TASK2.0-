@@ -7,10 +7,11 @@ import { KpiCards } from '@/components/KpiCards';
 import { DiscrepancyCharts } from '@/components/DiscrepancyCharts';
 import { DrillDownTable, Discrepancy } from '@/components/DrillDownTable';
 import { RawOrdersTable, RawPaymentsTable, RawOrderRecord, RawPaymentRecord } from '@/components/RawDataTables';
+import { AuditLogsTable, AuditLogRecord } from '@/components/AuditLogsTable';
 import { AiExplanationModal } from '@/components/AiExplanationModal';
 import { DataIngestionModal } from '@/components/DataIngestionModal';
 import { AiAssistantChat } from '@/components/AiAssistantChat';
-import { AlertOctagon, Sparkles, RefreshCw, Upload, FileText, FileSpreadsheet, CreditCard, ShieldAlert } from 'lucide-react';
+import { AlertOctagon, Sparkles, RefreshCw, Upload, FileText, FileSpreadsheet, CreditCard, ShieldAlert, Activity } from 'lucide-react';
 
 interface RunSummary {
   id: string;
@@ -39,11 +40,11 @@ export default function DashboardPage() {
   const [currentRun, setCurrentRun] = useState<FullRunData | null>(null);
   const [isLoadingRun, setIsLoadingRun] = useState(false);
 
-  // Tab State: DISCREPANCIES | ORDERS_CSV | PAYMENTS_CSV
-  const [activeTab, setActiveTab] = useState<'DISCREPANCIES' | 'ORDERS_CSV' | 'PAYMENTS_CSV'>('DISCREPANCIES');
+  // Tab State: DISCREPANCIES | ORDERS_CSV | PAYMENTS_CSV | AUDIT_LOGS
+  const [activeTab, setActiveTab] = useState<'DISCREPANCIES' | 'ORDERS_CSV' | 'PAYMENTS_CSV' | 'AUDIT_LOGS'>('DISCREPANCIES');
   const [rawOrders, setRawOrders] = useState<RawOrderRecord[]>([]);
   const [rawPayments, setRawPayments] = useState<RawPaymentRecord[]>([]);
-  const [isLoadingRaw, setIsLoadingRaw] = useState(false);
+  const [logs, setLogs] = useState<AuditLogRecord[]>([]);
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<Discrepancy | null>(null);
@@ -86,7 +87,6 @@ export default function DashboardPage() {
 
   // 3. Fetch Raw Database Datasets (orders.csv & payments.csv)
   const fetchRawData = async () => {
-    setIsLoadingRaw(true);
     try {
       const [resOrders, resPayments] = await Promise.all([
         fetch('/api/raw/orders'),
@@ -103,8 +103,19 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error('Failed to fetch raw datasets:', err);
-    } finally {
-      setIsLoadingRaw(false);
+    }
+  };
+
+  // 4. Fetch System Audit Logs
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch('/api/logs');
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data.logs || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch system logs:', err);
     }
   };
 
@@ -112,10 +123,11 @@ export default function DashboardPage() {
     if (user) {
       fetchRuns();
       fetchRawData();
+      fetchLogs();
     }
   }, [user]);
 
-  // 4. Load Details for Selected Run
+  // 5. Load Details for Selected Run
   const loadRunDetails = async (runId: string) => {
     setIsLoadingRun(true);
     try {
@@ -137,7 +149,7 @@ export default function DashboardPage() {
     }
   }, [selectedRunId]);
 
-  // 5. Update Discrepancy Audit Status
+  // 6. Update Discrepancy Audit Status
   const handleUpdateStatus = async (id: string, newStatus: Discrepancy['status']) => {
     try {
       const res = await fetch(`/api/discrepancies/${id}`, {
@@ -154,6 +166,7 @@ export default function DashboardPage() {
               d.id === id ? { ...d, status: newStatus } : d
             ),
           });
+          fetchLogs();
         }
       }
     } catch (err) {
@@ -161,7 +174,7 @@ export default function DashboardPage() {
     }
   };
 
-  // 6. Export CSV Report
+  // 7. Export CSV Report
   const handleExportCsv = () => {
     if (!currentRun || !currentRun.discrepancies || currentRun.discrepancies.length === 0) return;
 
@@ -257,10 +270,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Tab Navigation Switcher */}
-        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-2">
+        <div className="flex flex-wrap bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-2">
           <button
             onClick={() => setActiveTab('DISCREPANCIES')}
-            className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 ${
+            className={`flex-1 min-w-[140px] py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
               activeTab === 'DISCREPANCIES'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -272,26 +285,38 @@ export default function DashboardPage() {
 
           <button
             onClick={() => setActiveTab('ORDERS_CSV')}
-            className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 ${
+            className={`flex-1 min-w-[140px] py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
               activeTab === 'ORDERS_CSV'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Store Orders Dataset (`orders.csv` - {rawOrders.length})</span>
+            <span>Store Orders (`orders.csv` - {rawOrders.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('PAYMENTS_CSV')}
-            className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 ${
+            className={`flex-1 min-w-[140px] py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
               activeTab === 'PAYMENTS_CSV'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <CreditCard className="w-4 h-4" />
-            <span>Gateway Payments Dataset (`payments.csv` - {rawPayments.length})</span>
+            <span>Gateway Payments (`payments.csv` - {rawPayments.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('AUDIT_LOGS')}
+            className={`flex-1 min-w-[140px] py-2.5 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
+              activeTab === 'AUDIT_LOGS'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>System Audit Logs ({logs.length})</span>
           </button>
         </div>
 
@@ -360,6 +385,11 @@ export default function DashboardPage() {
         {activeTab === 'PAYMENTS_CSV' && (
           <RawPaymentsTable payments={rawPayments} />
         )}
+
+        {/* Tab 4: System Audit Logs & Email Alert Service View */}
+        {activeTab === 'AUDIT_LOGS' && (
+          <AuditLogsTable logs={logs} onRefreshLogs={fetchLogs} />
+        )}
       </main>
 
       {/* AI Discrepancy Detail Modal */}
@@ -376,6 +406,7 @@ export default function DashboardPage() {
         onIngestSuccess={(runId) => {
           fetchRuns();
           fetchRawData();
+          fetchLogs();
           loadRunDetails(runId);
         }}
       />
