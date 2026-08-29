@@ -22,15 +22,20 @@ export interface LLMExplanationOutput {
 }
 
 export async function explainDiscrepancy(input: LLMExplanationInput): Promise<LLMExplanationOutput> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || process.env.LLM_API_KEY;
+  const baseURL = process.env.LLM_BASE_URL || (process.env.GROQ_API_KEY ? 'https://api.groq.com/openai/v1' : undefined);
+  const model = process.env.LLM_MODEL || (process.env.GROQ_API_KEY ? 'llama-3.1-8b-instant' : 'gpt-4o-mini');
 
-  // Fallback engine if no OpenAI API Key provided
+  // Fallback engine if no API Key provided
   if (!apiKey || apiKey.trim() === '' || apiKey.includes('sk-proj-...')) {
     return generateFallbackExplanation(input);
   }
 
   try {
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({
+      apiKey,
+      baseURL,
+    });
 
     const prompt = `
 You are a senior financial controller and e-commerce auditor.
@@ -58,7 +63,7 @@ Respond strictly with a JSON object matching this schema:
 `;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model,
       messages: [
         { role: 'system', content: 'You are an expert e-commerce financial audit AI. Return valid JSON only.' },
         { role: 'user', content: prompt }
