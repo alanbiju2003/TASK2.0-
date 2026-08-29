@@ -66,7 +66,22 @@ function parseRowAmount(val: any): number {
 
 function parseRowDate(val: any): Date | null {
   if (!val) return null;
-  const d = new Date(val);
+  const str = String(val).trim();
+  
+  // Handle DD/MM/YYYY or DD/MM/YYYY HH:mm
+  const euroMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (euroMatch) {
+    const day = parseInt(euroMatch[1], 10);
+    const month = parseInt(euroMatch[2], 10) - 1;
+    const year = parseInt(euroMatch[3], 10);
+    const hours = parseInt(euroMatch[4] || '0', 10);
+    const mins = parseInt(euroMatch[5] || '0', 10);
+    const secs = parseInt(euroMatch[6] || '0', 10);
+    const d = new Date(Date.UTC(year, month, day, hours, mins, secs));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -86,11 +101,14 @@ export function parseOrdersCSV(csvText: string): ParsedOrder[] {
     const rawId = normalized.order_id || normalized.orderid || normalized.id || '';
     const cleanId = String(rawId).trim().toUpperCase();
 
+    // Prefer net_amount over gross_amount if available, fallback to amount/total
+    const amountVal = normalized.net_amount ?? normalized.amount ?? normalized.gross_amount ?? normalized.total ?? normalized.order_amount;
+
     return {
       orderId: cleanId,
       customerEmail: String(normalized.customer_email || normalized.email || '').trim().toLowerCase(),
-      orderDate: parseRowDate(normalized.order_date || normalized.date || normalized.created_at),
-      amount: parseRowAmount(normalized.amount || normalized.total || normalized.order_amount),
+      orderDate: parseRowDate(normalized.order_date || normalized.date || normalized.created_at || normalized.processed_at),
+      amount: parseRowAmount(amountVal),
       currency: String(normalized.currency || 'USD').trim().toUpperCase(),
       status: String(normalized.status || 'COMPLETED').trim().toUpperCase(),
       paymentMethod: String(normalized.payment_method || normalized.method || '').trim(),
@@ -112,18 +130,18 @@ export function parsePaymentsCSV(csvText: string): ParsedPayment[] {
       normalized[normalizeKey(k)] = row[k];
     });
 
-    const rawPayId = normalized.payment_id || normalized.paymentid || normalized.id || '';
-    const rawOrderRef = normalized.order_id || normalized.order_id_ref || normalized.order_ref || '';
+    const rawPayId = normalized.transaction_ref || normalized.payment_id || normalized.paymentid || normalized.id || '';
+    const rawOrderRef = normalized.order_reference || normalized.order_id || normalized.order_id_ref || normalized.order_ref || '';
 
     return {
       paymentId: String(rawPayId).trim().toUpperCase(),
       orderIdRef: String(rawOrderRef).trim().toUpperCase(),
       customerEmail: String(normalized.customer_email || normalized.email || '').trim().toLowerCase(),
-      paymentDate: parseRowDate(normalized.payment_date || normalized.date || normalized.created_at),
+      paymentDate: parseRowDate(normalized.processed_at || normalized.payment_date || normalized.date || normalized.created_at),
       amount: parseRowAmount(normalized.amount || normalized.total || normalized.payment_amount),
       currency: String(normalized.currency || 'USD').trim().toUpperCase(),
-      status: String(normalized.status || 'CAPTURED').trim().toUpperCase(),
-      feeAmount: parseRowAmount(normalized.fee_amount || normalized.fee || normalized.gateway_fee),
+      status: String(normalized.status || 'SETTLED').trim().toUpperCase(),
+      feeAmount: parseRowAmount(normalized.fee || normalized.fee_amount || normalized.gateway_fee),
       rawJson: row,
     };
   }).filter(p => p.paymentId.length > 0);
