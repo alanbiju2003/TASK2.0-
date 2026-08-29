@@ -1,7 +1,17 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ArrowUpDown, ChevronLeft, ChevronRight, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Sparkles,
+  ArrowUpDown,
+  CheckCircle2,
+  Clock,
+  Eye,
+  AlertTriangle,
+  FileCheck,
+} from 'lucide-react';
 
 export interface Discrepancy {
   id: string;
@@ -23,9 +33,33 @@ export interface Discrepancy {
 
 interface DrillDownTableProps {
   discrepancies: Discrepancy[];
-  onSelectDiscrepancy: (item: Discrepancy) => void;
-  onUpdateStatus: (id: string, newStatus: string) => void;
+  onSelectDiscrepancy: (discrepancy: Discrepancy) => void;
+  onUpdateStatus: (id: string, newStatus: Discrepancy['status']) => void;
 }
+
+const SEVERITY_BADGES: Record<string, string> = {
+  CRITICAL: 'bg-rose-50 text-rose-700 border-rose-200',
+  HIGH: 'bg-amber-50 text-amber-700 border-amber-200',
+  MEDIUM: 'bg-blue-50 text-blue-700 border-blue-200',
+  LOW: 'bg-slate-100 text-slate-700 border-slate-200',
+};
+
+const STATUS_BADGES: Record<string, string> = {
+  OPEN: 'bg-rose-50 text-rose-700 border-rose-200',
+  IN_REVIEW: 'bg-amber-50 text-amber-700 border-amber-200',
+  RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  IGNORED: 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  UNMATCHED_ORDER: 'Unmatched Order',
+  UNMATCHED_PAYMENT: 'Unmatched Payment',
+  DUPLICATE_PAYMENT: 'Duplicate Payment',
+  AMOUNT_MISMATCH: 'Amount Mismatch',
+  STATUS_MISMATCH: 'Status Mismatch',
+  FEE_LEAKAGE: 'Fee Leakage',
+  CURRENCY_MISMATCH: 'Currency Mismatch',
+};
 
 export const DrillDownTable: React.FC<DrillDownTableProps> = ({
   discrepancies,
@@ -33,234 +67,215 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
   onUpdateStatus,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('ALL');
-  const [selectedSeverity, setSelectedSeverity] = useState('ALL');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [sortField, setSortField] = useState<keyof Discrepancy>('difference');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Filter logic
-  const filteredData = useMemo(() => {
-    return discrepancies.filter((item) => {
-      const matchSearch =
-        (item.orderId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.paymentId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.customerEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+  // Filtering & Sorting Logic
+  const filteredDiscrepancies = useMemo(() => {
+    return discrepancies
+      .filter((item) => {
+        const matchesSearch =
+          (item.orderId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.paymentId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.customerEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.description || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchType = selectedType === 'ALL' || item.type === selectedType;
-      const matchSeverity = selectedSeverity === 'ALL' || item.severity === selectedSeverity;
-      const matchStatus = selectedStatus === 'ALL' || item.status === selectedStatus;
+        const matchesType = typeFilter === 'ALL' || item.type === typeFilter;
+        const matchesSeverity = severityFilter === 'ALL' || item.severity === severityFilter;
+        const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
 
-      return matchSearch && matchType && matchSeverity && matchStatus;
-    });
-  }, [discrepancies, searchTerm, selectedType, selectedSeverity, selectedStatus]);
+        return matchesSearch && matchesType && matchesSeverity && matchesStatus;
+      })
+      .sort((a, b) => {
+        const valA = a[sortField] ?? 0;
+        const valB = b[sortField] ?? 0;
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [discrepancies, searchTerm, typeFilter, severityFilter, statusFilter, sortField, sortOrder]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredData.slice(start, start + itemsPerPage);
-  }, [filteredData, currentPage]);
-
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'CRITICAL':
-        return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-      case 'HIGH':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-      case 'MEDIUM':
-        return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
-      default:
-        return 'bg-slate-500/20 text-slate-300 border-slate-500/40';
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    return type.replace(/_/g, ' ');
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'RESOLVED':
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-      case 'IN_REVIEW':
-        return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
-      case 'IGNORED':
-        return 'bg-slate-700/50 text-slate-400 border-slate-600/30';
-      default:
-        return 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+  const toggleSort = (field: keyof Discrepancy) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
     }
   };
 
   return (
-    <div className="glass-card rounded-2xl p-6">
-      {/* Table Header Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 tracking-tight">Discrepancy Audit Log</h2>
-          <p className="text-xs text-slate-400">
-            Drill-down into individual order & payment variances. Click any row for AI analysis.
-          </p>
+    <div className="glass-card rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Table Toolbar Controls */}
+      <div className="p-5 border-b border-slate-200 bg-slate-50/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search Order ID, Payment Ref, Customer Email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-sm"
+          />
         </div>
 
-        {/* Filters & Search */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search Order, Payment ID, Email..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-9 pr-3 py-1.5 text-xs bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500/60 w-56"
-            />
+        {/* Filter Dropdowns */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
+            >
+              <option value="ALL">All Discrepancy Types</option>
+              {Object.keys(TYPE_LABELS).map((key) => (
+                <option key={key} value={key}>
+                  {TYPE_LABELS[key]}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Type Filter */}
-          <select
-            value={selectedType}
-            onChange={(e) => {
-              setSelectedType(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500/60"
-          >
-            <option value="ALL">All Discrepancy Types</option>
-            <option value="UNMATCHED_ORDER">Unmatched Order</option>
-            <option value="UNMATCHED_PAYMENT">Unmatched Payment</option>
-            <option value="AMOUNT_MISMATCH">Amount Mismatch</option>
-            <option value="DUPLICATE_PAYMENT">Duplicate Payment</option>
-            <option value="STATUS_MISMATCH">Status Mismatch</option>
-            <option value="FEE_LEAKAGE">Fee Leakage</option>
-            <option value="CURRENCY_MISMATCH">Currency Mismatch</option>
-          </select>
+          <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
+            >
+              <option value="ALL">All Severities</option>
+              <option value="CRITICAL">Critical Risk</option>
+              <option value="HIGH">High Risk</option>
+              <option value="MEDIUM">Medium Risk</option>
+              <option value="LOW">Low Risk</option>
+            </select>
+          </div>
 
-          {/* Severity Filter */}
-          <select
-            value={selectedSeverity}
-            onChange={(e) => {
-              setSelectedSeverity(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500/60"
-          >
-            <option value="ALL">All Severities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs bg-slate-900/90 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500/60"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="OPEN">Open</option>
-            <option value="IN_REVIEW">In Review</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="IGNORED">Ignored</option>
-          </select>
+          <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
+            >
+              <option value="ALL">All Audit Statuses</option>
+              <option value="OPEN">Open</option>
+              <option value="IN_REVIEW">In Review</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="IGNORED">Ignored</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Table Element */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800/80">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-900/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+      {/* Responsive Table Area */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs text-slate-700">
+          <thead className="bg-slate-100/90 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
+            <tr>
               <th className="py-3 px-4">Severity</th>
-              <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Order Ref</th>
+              <th className="py-3 px-4">Discrepancy Type</th>
+              <th className="py-3 px-4">Store Order ID</th>
               <th className="py-3 px-4">Gateway Payment Ref</th>
-              <th className="py-3 px-4 text-right">Store Amount</th>
-              <th className="py-3 px-4 text-right">Gateway Amount</th>
-              <th className="py-3 px-4 text-right">Variance</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4 text-center">AI Insights</th>
+              <th className="py-3 px-4 text-right cursor-pointer" onClick={() => toggleSort('orderAmount')}>
+                <div className="flex items-center justify-end space-x-1">
+                  <span>Store Net ($)</span>
+                  <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                </div>
+              </th>
+              <th className="py-3 px-4 text-right cursor-pointer" onClick={() => toggleSort('paymentAmount')}>
+                <div className="flex items-center justify-end space-x-1">
+                  <span>Gateway Amount ($)</span>
+                  <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                </div>
+              </th>
+              <th className="py-3 px-4 text-right cursor-pointer" onClick={() => toggleSort('difference')}>
+                <div className="flex items-center justify-end space-x-1">
+                  <span>Variance / Risk ($)</span>
+                  <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                </div>
+              </th>
+              <th className="py-3 px-4">Audit Status</th>
+              <th className="py-3 px-4 text-center">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/50 text-xs">
-            {paginatedData.length > 0 ? (
-              paginatedData.map((item) => (
-                <tr
-                  key={item.id}
-                  onClick={() => onSelectDiscrepancy(item)}
-                  className="hover:bg-slate-800/40 cursor-pointer transition-colors group"
-                >
-                  <td className="py-3 px-4 whitespace-nowrap">
+
+          <tbody className="divide-y divide-slate-100">
+            {filteredDiscrepancies.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="py-12 text-center text-slate-400">
+                  No audit discrepancies match the selected filter criteria.
+                </td>
+              </tr>
+            ) : (
+              filteredDiscrepancies.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                  {/* Severity Badge */}
+                  <td className="py-3.5 px-4 font-semibold">
                     <span
-                      className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-md border ${getSeverityBadge(
-                        item.severity
-                      )}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        SEVERITY_BADGES[item.severity] || SEVERITY_BADGES.LOW
+                      }`}
                     >
                       {item.severity}
                     </span>
                   </td>
-                  <td className="py-3 px-4 font-semibold text-slate-200 whitespace-nowrap">
-                    {getTypeLabel(item.type)}
+
+                  {/* Discrepancy Type */}
+                  <td className="py-3.5 px-4 font-semibold text-slate-900">
+                    {TYPE_LABELS[item.type] || item.type}
                   </td>
-                  <td className="py-3 px-4 font-mono text-slate-300">
-                    {item.orderId ? (
-                      <span className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                        {item.orderId}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">N/A</span>
-                    )}
+
+                  {/* Order ID */}
+                  <td className="py-3.5 px-4 font-mono font-semibold text-blue-700">
+                    {item.orderId || <span className="text-slate-400 font-sans font-normal">—</span>}
                   </td>
-                  <td className="py-3 px-4 font-mono text-slate-300">
-                    {item.paymentId ? (
-                      <span className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                        {item.paymentId}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">N/A</span>
-                    )}
+
+                  {/* Payment ID */}
+                  <td className="py-3.5 px-4 font-mono text-slate-600">
+                    {item.paymentId || <span className="text-slate-400 font-sans font-normal">—</span>}
                   </td>
-                  <td className="py-3 px-4 text-right font-medium text-slate-200">
+
+                  {/* Store Amount */}
+                  <td className="py-3.5 px-4 text-right font-semibold text-slate-800">
                     {item.orderAmount != null ? (
                       <span>
                         ${item.orderAmount.toFixed(2)}{' '}
-                        <span className="text-[10px] text-slate-500 font-mono">USD</span>
+                        <span className="text-[10px] text-slate-400 font-mono font-normal">USD</span>
                       </span>
                     ) : (
                       '—'
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right font-medium text-slate-200">
+
+                  {/* Gateway Amount */}
+                  <td className="py-3.5 px-4 text-right font-semibold text-slate-800">
                     {item.paymentAmount != null ? (
                       <span>
                         ${item.paymentAmount.toFixed(2)}{' '}
-                        <span className="text-[10px] text-slate-500 font-mono">USD</span>
+                        <span className="text-[10px] text-slate-400 font-mono font-normal">USD</span>
                       </span>
                     ) : (
                       '—'
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right font-semibold text-rose-400">
+
+                  {/* Difference / Risk */}
+                  <td className="py-3.5 px-4 text-right font-bold text-rose-600">
                     {item.difference !== 0 ? `$${Math.abs(item.difference).toFixed(2)}` : '$0.00'}
                   </td>
-                  <td
-                    className="py-3 px-4 whitespace-nowrap"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+
+                  {/* Audit Status Dropdown */}
+                  <td className="py-3.5 px-4">
                     <select
                       value={item.status}
-                      onChange={(e) => onUpdateStatus(item.id, e.target.value)}
-                      className={`px-2 py-1 text-[11px] font-semibold rounded-md border text-slate-200 bg-slate-900 focus:outline-none cursor-pointer ${getStatusBadge(
-                        item.status
-                      )}`}
+                      onChange={(e) => onUpdateStatus(item.id, e.target.value as Discrepancy['status'])}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border cursor-pointer focus:outline-none ${
+                        STATUS_BADGES[item.status] || STATUS_BADGES.OPEN
+                      }`}
                     >
                       <option value="OPEN">OPEN</option>
                       <option value="IN_REVIEW">IN REVIEW</option>
@@ -268,59 +283,31 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
                       <option value="IGNORED">IGNORED</option>
                     </select>
                   </td>
-                  <td className="py-3 px-4 text-center">
+
+                  {/* Action Button */}
+                  <td className="py-3.5 px-4 text-center">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectDiscrepancy(item);
-                      }}
-                      className="inline-flex items-center space-x-1 text-[11px] font-semibold text-indigo-400 bg-indigo-950/60 hover:bg-indigo-900/80 px-2.5 py-1 rounded-lg border border-indigo-700/50 transition-all group-hover:scale-105"
+                      onClick={() => onSelectDiscrepancy(item)}
+                      className="px-3 py-1.5 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all inline-flex items-center space-x-1.5 shadow-sm"
                     >
-                      <Sparkles className="w-3 h-3 text-indigo-400" />
-                      <span>Explain</span>
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                      <span>AI Audit Explainer</span>
                     </button>
                   </td>
                 </tr>
               ))
-            ) : (
-              <tr>
-                <td colSpan={9} className="py-8 text-center text-slate-500">
-                  <AlertCircle className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                  No discrepancies matched your search criteria.
-                </td>
-              </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination Footer */}
-      <div className="flex items-center justify-between mt-4 text-xs text-slate-400">
-        <div>
-          Showing <span className="font-semibold text-slate-200">{filteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> to{' '}
-          <span className="font-semibold text-slate-200">{Math.min(currentPage * itemsPerPage, filteredData.length)}</span> of{' '}
-          <span className="font-semibold text-slate-200">{filteredData.length}</span> discrepancies
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-slate-300 font-medium px-2">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+      {/* Footer Info */}
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
+        <span>
+          Showing <strong className="text-slate-800">{filteredDiscrepancies.length}</strong> of{' '}
+          <strong className="text-slate-800">{discrepancies.length}</strong> audit discrepancies
+        </span>
+        <span className="font-mono text-[11px]">Click "AI Audit Explainer" for transaction root cause</span>
       </div>
     </div>
   );

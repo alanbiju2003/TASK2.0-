@@ -17,37 +17,41 @@ export const Navbar: React.FC<NavbarProps> = ({
   onExportCsv,
 }) => {
   return (
-    <header className="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-6 py-3.5">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 sm:px-6 py-3 transition-all">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
         {/* Brand */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <ShieldAlert className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/20 text-white">
+            <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400 tracking-tight">
-              LedgerPulse
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center space-x-2">
+              <span>LedgerPulse</span>
+              <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                PRO AUDIT
+              </span>
             </h1>
-            <p className="text-xs text-slate-400 font-medium">Revenue Reconciliation & Audit Engine</p>
+            <p className="text-xs text-slate-500 font-medium">Revenue Reconciliation & Audit Engine</p>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {onExportCsv && (
             <button
               onClick={onExportCsv}
-              className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-all"
+              className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-sm transition-all"
               title="Download full CSV report of audit discrepancies"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Export Audit CSV</span>
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Export Audit CSV</span>
+              <span className="sm:hidden">Export</span>
             </button>
           )}
 
           <button
             onClick={onOpenUpload}
-            className="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload CSV Files</span>
@@ -55,16 +59,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* User Profile */}
           {user && (
-            <div className="flex items-center space-x-3 pl-3 border-l border-slate-800">
-              <div className="flex items-center space-x-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
-                <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs font-medium text-slate-300 max-w-[140px] truncate">
+            <div className="flex items-center space-x-2 pl-2 sm:pl-3 border-l border-slate-200">
+              <div className="flex items-center space-x-2 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200">
+                <UserIcon className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-700 max-w-[120px] sm:max-w-[160px] truncate">
                   {user.name || user.email}
                 </span>
               </div>
               <button
                 onClick={onLogout}
-                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                 title="Log out"
               >
                 <LogOut className="w-4 h-4" />

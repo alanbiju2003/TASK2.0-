@@ -16,135 +16,137 @@ import {
 
 interface DiscrepancyItem {
   type: string;
+  severity: string;
   difference?: number;
-  orderAmount?: number | null;
-  paymentAmount?: number | null;
-  severity?: string;
+  moneyAtRisk?: number;
 }
 
 interface DiscrepancyChartsProps {
   discrepancies: DiscrepancyItem[];
 }
 
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  UNMATCHED_ORDER: { label: 'Unmatched Order', color: '#f43f5e' }, // Rose
-  UNMATCHED_PAYMENT: { label: 'Unmatched Payment', color: '#f59e0b' }, // Amber
-  AMOUNT_MISMATCH: { label: 'Amount Mismatch', color: '#3b82f6' }, // Blue
-  DUPLICATE_PAYMENT: { label: 'Duplicate Payment', color: '#ec4899' }, // Pink
-  STATUS_MISMATCH: { label: 'Status Mismatch', color: '#a855f7' }, // Purple
-  FEE_LEAKAGE: { label: 'Fee Leakage', color: '#10b981' }, // Emerald
-  CURRENCY_MISMATCH: { label: 'Currency Mismatch', color: '#06b6d4' }, // Cyan
+const TYPE_LABELS: Record<string, string> = {
+  UNMATCHED_ORDER: 'Unmatched Store Order',
+  UNMATCHED_PAYMENT: 'Unmatched Gateway Payment',
+  DUPLICATE_PAYMENT: 'Duplicate Payment Capture',
+  AMOUNT_MISMATCH: 'Amount Misalignment',
+  STATUS_MISMATCH: 'Status Mismatch',
+  FEE_LEAKAGE: 'Gateway Fee Leakage',
+  CURRENCY_MISMATCH: 'Currency Mismatch',
+};
+
+const COLOR_PALETTE: Record<string, string> = {
+  UNMATCHED_ORDER: '#ef4444', // red
+  UNMATCHED_PAYMENT: '#f97316', // orange
+  DUPLICATE_PAYMENT: '#eab308', // yellow
+  AMOUNT_MISMATCH: '#3b82f6', // blue
+  STATUS_MISMATCH: '#8b5cf6', // purple
+  FEE_LEAKAGE: '#ec4899', // pink
+  CURRENCY_MISMATCH: '#06b6d4', // cyan
 };
 
 export const DiscrepancyCharts: React.FC<DiscrepancyChartsProps> = ({ discrepancies }) => {
-  // Aggregate count by type
+  // Aggregate counts by type
   const typeCounts: Record<string, number> = {};
   const typeRisk: Record<string, number> = {};
 
-  discrepancies.forEach((d) => {
-    typeCounts[d.type] = (typeCounts[d.type] || 0) + 1;
-    const riskVal = Math.abs(d.difference || d.orderAmount || d.paymentAmount || 0);
-    typeRisk[d.type] = (typeRisk[d.type] || 0) + riskVal;
+  discrepancies.forEach((item) => {
+    const risk = item.moneyAtRisk ?? Math.abs(item.difference || 0);
+    typeCounts[item.type] = (typeCounts[item.type] || 0) + 1;
+    typeRisk[item.type] = (typeRisk[item.type] || 0) + risk;
   });
 
-  const pieData = Object.keys(typeCounts).map((type) => ({
-    name: TYPE_LABELS[type]?.label || type,
-    value: typeCounts[type],
-    color: TYPE_LABELS[type]?.color || '#94a3b8',
+  const donutData = Object.keys(typeCounts).map((key) => ({
+    name: TYPE_LABELS[key] || key,
+    count: typeCounts[key],
+    color: COLOR_PALETTE[key] || '#64748b',
   }));
 
-  const barData = Object.keys(typeRisk).map((type) => ({
-    name: TYPE_LABELS[type]?.label || type,
-    risk: typeRisk[type],
-    color: TYPE_LABELS[type]?.color || '#3b82f6',
+  const barData = Object.keys(typeRisk).map((key) => ({
+    name: TYPE_LABELS[key] || key,
+    risk: typeRisk[key],
+    color: COLOR_PALETTE[key] || '#64748b',
   }));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* 1. Donut Chart - Count by Discrepancy Type */}
-      <div className="glass-card p-6 rounded-2xl">
-        <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider mb-1">
-          Discrepancy Breakdown by Type
-        </h3>
-        <p className="text-xs text-slate-400 mb-4">Volume distribution across discrepancy categories</p>
-        
-        <div className="h-[240px] w-full flex items-center justify-center">
-          {pieData.length > 0 ? (
+      {/* Donut Chart */}
+      <div className="glass-card p-6 rounded-3xl border border-slate-200 bg-white">
+        <h3 className="text-sm font-bold text-slate-800 mb-1">Discrepancy Distribution by Type</h3>
+        <p className="text-xs text-slate-500 mb-4">Frequency count of audit mismatches identified</p>
+
+        {donutData.length === 0 ? (
+          <div className="h-64 flex items-center justify-center text-xs text-slate-400">
+            No discrepancy data available
+          </div>
+        ) : (
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={pieData}
+                  data={donutData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={85}
+                  innerRadius={60}
+                  outerRadius={90}
                   paddingAngle={4}
-                  dataKey="value"
+                  dataKey="count"
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="#0f172a" strokeWidth={2} />
+                  {donutData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#334155',
-                    borderRadius: '8px',
-                    color: '#f8fafc',
+                    backgroundColor: '#ffffff',
+                    borderColor: '#cbd5e1',
+                    borderRadius: '12px',
+                    color: '#0f172a',
                     fontSize: '12px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                   }}
-                  formatter={(value: any) => [`${value} discrepancies`, 'Count']}
                 />
               </PieChart>
             </ResponsiveContainer>
-          ) : (
-            <div className="text-xs text-slate-500">No discrepancies detected</div>
-          )}
-        </div>
-
-        {/* Custom Legend */}
-        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-          {pieData.map((item, idx) => (
-            <div key={idx} className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="text-slate-300 truncate">{item.name}:</span>
-              <span className="font-semibold text-slate-100">{item.value}</span>
-            </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* 2. Bar Chart - Financial Risk by Category */}
-      <div className="glass-card p-6 rounded-2xl">
-        <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider mb-1">
-          Financial Risk Exposure ($)
-        </h3>
-        <p className="text-xs text-slate-400 mb-4">Money at risk distribution across discrepancy types</p>
+      {/* Bar Chart */}
+      <div className="glass-card p-6 rounded-3xl border border-slate-200 bg-white">
+        <h3 className="text-sm font-bold text-slate-800 mb-1">Money at Risk by Category ($)</h3>
+        <p className="text-xs text-slate-500 mb-4">Total financial risk exposure per issue type</p>
 
-        <div className="h-[240px] w-full">
-          {barData.length > 0 ? (
+        {barData.length === 0 ? (
+          <div className="h-64 flex items-center justify-center text-xs text-slate-400">
+            No financial risk data available
+          </div>
+        ) : (
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis
                   dataKey="name"
-                  stroke="#64748b"
-                  fontSize={10}
-                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 10 }}
                   interval={0}
                   angle={-15}
                   textAnchor="end"
                 />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 11 }} />
                 <Tooltip
+                  formatter={(value: any) => [
+                    `$${Number(value || 0).toFixed(2)}`,
+                    'Money at Risk',
+                  ]}
                   contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#334155',
-                    borderRadius: '8px',
-                    color: '#f8fafc',
+                    backgroundColor: '#ffffff',
+                    borderColor: '#cbd5e1',
+                    borderRadius: '12px',
+                    color: '#0f172a',
                     fontSize: '12px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                   }}
-                  formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Money at Risk']}
                 />
                 <Bar dataKey="risk" radius={[6, 6, 0, 0]}>
                   {barData.map((entry, index) => (
@@ -153,10 +155,8 @@ export const DiscrepancyCharts: React.FC<DiscrepancyChartsProps> = ({ discrepanc
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <div className="text-xs text-slate-500 h-full flex items-center justify-center">No risk data available</div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

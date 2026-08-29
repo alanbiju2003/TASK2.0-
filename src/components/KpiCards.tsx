@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShoppingBag, CreditCard, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { DollarSign, AlertOctagon, ShieldCheck, FileSpreadsheet, CreditCard } from 'lucide-react';
 
 interface KpiCardsProps {
   totalOrdersCount: number;
@@ -11,7 +11,6 @@ interface KpiCardsProps {
   totalReconciledAmount: number;
   totalDisputedAmount: number;
   moneyAtRisk: number;
-  discrepancyCount: number;
 }
 
 export const KpiCards: React.FC<KpiCardsProps> = ({
@@ -22,119 +21,103 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
   totalReconciledAmount,
   totalDisputedAmount,
   moneyAtRisk,
-  discrepancyCount,
 }) => {
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 2,
-    }).format(val || 0);
-  };
-
-  const reconciledRatio = totalOrdersAmount > 0 
-    ? ((totalReconciledAmount / totalOrdersAmount) * 100).toFixed(1) 
-    : '0';
+  const reconciledPercentage = totalOrdersAmount > 0 
+    ? Math.min(100, Math.round((totalReconciledAmount / totalOrdersAmount) * 100)) 
+    : 0;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {/* 1. Total Orders */}
-      <div className="glass-card p-5 rounded-2xl relative overflow-hidden group transition-all">
+      <div className="glass-card p-5 rounded-2xl border border-slate-200 bg-white relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Orders</span>
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <ShoppingBag className="w-4 h-4" />
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Store Sales</span>
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+            <FileSpreadsheet className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-4">
-          <div className="text-2xl font-bold text-slate-100 tracking-tight">
-            {formatCurrency(totalOrdersAmount)}
-          </div>
-          <div className="mt-1 flex items-center text-xs text-slate-400 font-medium">
-            <span className="text-blue-400 font-semibold">{totalOrdersCount}</span>
-            <span className="ml-1">orders recorded</span>
-          </div>
+        <div className="mt-3">
+          <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+            ${totalOrdersAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            <span className="font-semibold text-slate-700">{totalOrdersCount}</span> store orders processed
+          </p>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-500 opacity-60"></div>
       </div>
 
       {/* 2. Total Payments */}
-      <div className="glass-card p-5 rounded-2xl relative overflow-hidden group transition-all">
+      <div className="glass-card p-5 rounded-2xl border border-slate-200 bg-white relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Payments</span>
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Gateway Captures</span>
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
             <CreditCard className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-4">
-          <div className="text-2xl font-bold text-slate-100 tracking-tight">
-            {formatCurrency(totalPaymentsAmount)}
-          </div>
-          <div className="mt-1 flex items-center text-xs text-slate-400 font-medium">
-            <span className="text-emerald-400 font-semibold">{totalPaymentsCount}</span>
-            <span className="ml-1">gateway charges</span>
-          </div>
+        <div className="mt-3">
+          <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+            ${totalPaymentsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            <span className="font-semibold text-slate-700">{totalPaymentsCount}</span> gateway transactions
+          </p>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-600 to-teal-500 opacity-60"></div>
       </div>
 
       {/* 3. Reconciled Value */}
-      <div className="glass-card p-5 rounded-2xl relative overflow-hidden group transition-all">
+      <div className="glass-card p-5 rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 to-white relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Reconciled Value</span>
-          <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
-            <CheckCircle2 className="w-4 h-4" />
+          <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Reconciled Value</span>
+          <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-200">
+            <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-4">
-          <div className="text-2xl font-bold text-slate-100 tracking-tight">
-            {formatCurrency(totalReconciledAmount)}
-          </div>
-          <div className="mt-1 flex items-center text-xs text-slate-400 font-medium">
-            <span className="text-teal-400 font-semibold">{reconciledRatio}%</span>
-            <span className="ml-1">matched & verified</span>
+        <div className="mt-3">
+          <h3 className="text-2xl font-bold text-emerald-950 tracking-tight">
+            ${totalReconciledAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+          <div className="mt-2 flex items-center space-x-2">
+            <div className="flex-1 bg-emerald-100 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${reconciledPercentage}%` }}
+              />
+            </div>
+            <span className="text-xs font-bold text-emerald-700">{reconciledPercentage}% Matched</span>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-400 opacity-60"></div>
       </div>
 
       {/* 4. Value in Dispute */}
-      <div className="glass-card p-5 rounded-2xl relative overflow-hidden group transition-all">
+      <div className="glass-card p-5 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/40 to-white relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Value in Dispute</span>
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <AlertTriangle className="w-4 h-4" />
+          <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Disputed Value</span>
+          <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200">
+            <DollarSign className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-4">
-          <div className="text-2xl font-bold text-slate-100 tracking-tight">
-            {formatCurrency(totalDisputedAmount)}
-          </div>
-          <div className="mt-1 flex items-center text-xs text-slate-400 font-medium">
-            <span className="text-amber-400 font-semibold">{discrepancyCount}</span>
-            <span className="ml-1">discrepancies found</span>
-          </div>
+        <div className="mt-3">
+          <h3 className="text-2xl font-bold text-amber-950 tracking-tight">
+            ${totalDisputedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+          <p className="text-xs text-amber-700 font-medium mt-1">Requires audit resolution</p>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-400 opacity-60"></div>
       </div>
 
       {/* 5. Money at Risk */}
-      <div className="glass-card p-5 rounded-2xl relative overflow-hidden group transition-all bg-gradient-to-br from-rose-950/30 to-slate-900/60 border-rose-500/30">
+      <div className="glass-card p-5 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/60 to-white relative overflow-hidden shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-rose-300 uppercase tracking-wider">Money at Risk</span>
-          <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 animate-pulse">
-            <ShieldAlert className="w-4 h-4" />
+          <span className="text-xs font-bold text-rose-800 uppercase tracking-wider">Money at Risk</span>
+          <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center border border-rose-200">
+            <AlertOctagon className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-4">
-          <div className="text-2xl font-bold text-rose-200 tracking-tight">
-            {formatCurrency(moneyAtRisk)}
-          </div>
-          <div className="mt-1 flex items-center text-xs text-rose-300/80 font-medium">
-            <span>Direct financial exposure</span>
-          </div>
+        <div className="mt-3">
+          <h3 className="text-2xl font-bold text-rose-950 tracking-tight">
+            ${moneyAtRisk.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h3>
+          <p className="text-xs text-rose-700 font-semibold mt-1">Critical financial risk exposure</p>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 to-red-500"></div>
       </div>
     </div>
   );
