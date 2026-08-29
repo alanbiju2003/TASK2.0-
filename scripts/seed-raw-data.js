@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const { parseOrdersCSV, parsePaymentsCSV, runReconciliation } = require('../src/lib/reconciliation.ts');
 
 const prisma = new PrismaClient();
@@ -13,6 +14,26 @@ async function seedRawData() {
 
   const parsedOrders = parseOrdersCSV(ordersCsv);
   const parsedPayments = parsePaymentsCSV(paymentsCsv);
+
+  // Ensure demo user exists
+  const demoEmail = 'demo@ledgerpulse.com';
+  const passwordHash = await bcrypt.hash('demo123456', 10);
+
+  let demoUser = await prisma.user.findUnique({ where: { email: demoEmail } });
+  if (!demoUser) {
+    demoUser = await prisma.user.create({
+      data: {
+        email: demoEmail,
+        name: 'Demo Controller',
+        passwordHash,
+      },
+    });
+  } else {
+    await prisma.user.update({
+      where: { email: demoEmail },
+      data: { passwordHash },
+    });
+  }
 
   const users = await prisma.user.findMany();
   console.log(`Found ${users.length} users in database.`);
