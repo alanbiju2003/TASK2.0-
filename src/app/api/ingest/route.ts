@@ -49,10 +49,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Both CSV files appear to be empty or malformed.' }, { status: 400 });
     }
 
-    // 2. Run Reconciliation Engine
+    // 2. Save Raw Datasets into Database
+    await prisma.rawOrder.deleteMany({ where: { userId: userPayload.userId } });
+    await prisma.rawPayment.deleteMany({ where: { userId: userPayload.userId } });
+
+    await prisma.rawOrder.createMany({
+      data: orders.map((o) => ({
+        userId: userPayload.userId,
+        orderId: o.orderId,
+        customerEmail: o.customerEmail || null,
+        orderDate: o.orderDate ? new Date(o.orderDate) : null,
+        amount: o.amount ?? 0,
+        currency: o.currency || 'USD',
+        status: o.status || 'COMPLETED',
+      })),
+    });
+
+    await prisma.rawPayment.createMany({
+      data: payments.map((p) => ({
+        userId: userPayload.userId,
+        paymentId: p.paymentId || 'PAY-REF',
+        orderIdRef: p.orderIdRef || null,
+        customerEmail: p.customerEmail || null,
+        paymentDate: p.paymentDate ? new Date(p.paymentDate) : null,
+        amount: p.amount,
+        currency: p.currency || 'USD',
+        status: p.status || 'SETTLED',
+        feeAmount: p.feeAmount || 0,
+      })),
+    });
+
+    // 3. Run Reconciliation Engine
     const reconSummary = runReconciliation(orders, payments);
 
-    // 3. Save to Database
+    // 4. Save Reconciliation Run & Discrepancies to Database
     const run = await prisma.reconciliationRun.create({
       data: {
         userId: userPayload.userId,
