@@ -178,6 +178,38 @@ PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAP
     }
   };
 
+  // 6. Export CSV Report
+  const handleExportCsv = () => {
+    if (!currentRun || !currentRun.discrepancies || currentRun.discrepancies.length === 0) return;
+
+    const headers = ['Discrepancy ID', 'Type', 'Severity', 'Store Order ID', 'Gateway Payment ID', 'Customer Email', 'Store Amount', 'Gateway Amount', 'Variance ($)', 'Order Status', 'Payment Status', 'Audit Description', 'Audit Status'];
+    
+    const rows = currentRun.discrepancies.map(d => [
+      d.id,
+      d.type,
+      d.severity,
+      d.orderId || '',
+      d.paymentId || '',
+      d.customerEmail || '',
+      d.orderAmount != null ? d.orderAmount.toFixed(2) : '',
+      d.paymentAmount != null ? d.paymentAmount.toFixed(2) : '',
+      Math.abs(d.difference || 0).toFixed(2),
+      d.orderStatus || '',
+      d.paymentStatus || '',
+      `"${(d.description || '').replace(/"/g, '""')}"`,
+      d.status
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Reconciliation_Audit_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleLogout = async () => {
     await fetch('/api/auth/me', { method: 'DELETE' });
     router.push('/login');
@@ -199,6 +231,7 @@ PAY-9999,ORD-UNKNOWN,orphan.user@example.com,2026-08-08T18:00:00Z,350.00,USD,CAP
         user={user}
         onOpenUpload={() => setIsUploadOpen(true)}
         onLoadSample={loadSampleData}
+        onExportCsv={handleExportCsv}
         onLogout={handleLogout}
         isLoadingSample={isLoadingSample}
       />

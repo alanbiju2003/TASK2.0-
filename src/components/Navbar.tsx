@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { ShieldAlert, Upload, Sparkles, LogOut, User as UserIcon, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Upload, Sparkles, LogOut, User as UserIcon, RefreshCw, Download } from 'lucide-react';
 
 interface NavbarProps {
   user: { email: string; name?: string } | null;
   onOpenUpload: () => void;
   onLoadSample: () => void;
   onLogout: () => void;
+  onExportCsv?: () => void;
   isLoadingSample?: boolean;
 }
 
@@ -16,6 +17,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenUpload,
   onLoadSample,
   onLogout,
+  onExportCsv,
   isLoadingSample,
 }) => {
   return (
@@ -36,6 +38,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center space-x-3">
+          {onExportCsv && (
+            <button
+              onClick={onExportCsv}
+              className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg transition-all"
+              title="Download full CSV report of audit discrepancies"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Export Audit CSV</span>
+            </button>
+          )}
+
           <button
             onClick={onLoadSample}
             disabled={isLoadingSample}
