@@ -6,11 +6,9 @@ import {
   Filter,
   Sparkles,
   ArrowUpDown,
-  CheckCircle2,
-  Clock,
-  Eye,
-  AlertTriangle,
-  FileCheck,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export interface Discrepancy {
@@ -73,6 +71,10 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
   const [sortField, setSortField] = useState<keyof Discrepancy>('difference');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // Pagination State
+  const [pageSize, setPageSize] = useState<number | 'ALL'>(25);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   // Filtering & Sorting Logic
   const filteredDiscrepancies = useMemo(() => {
     return discrepancies
@@ -98,6 +100,17 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
       });
   }, [discrepancies, searchTerm, typeFilter, severityFilter, statusFilter, sortField, sortOrder]);
 
+  // Total pages computation
+  const totalItems = filteredDiscrepancies.length;
+  const totalPages = pageSize === 'ALL' ? 1 : Math.ceil(totalItems / pageSize) || 1;
+
+  // Slice records for current page view
+  const paginatedDiscrepancies = useMemo(() => {
+    if (pageSize === 'ALL') return filteredDiscrepancies;
+    const start = (currentPage - 1) * pageSize;
+    return filteredDiscrepancies.slice(start, start + pageSize);
+  }, [filteredDiscrepancies, currentPage, pageSize]);
+
   const toggleSort = (field: keyof Discrepancy) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -118,18 +131,24 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
             type="text"
             placeholder="Search Order ID, Payment Ref, Customer Email..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full pl-10 pr-4 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-sm"
           />
         </div>
 
-        {/* Filter Dropdowns */}
+        {/* Filter & Page Size Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
             >
               <option value="ALL">All Discrepancy Types</option>
@@ -144,7 +163,10 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
           <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
             <select
               value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
+              onChange={(e) => {
+                setSeverityFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
             >
               <option value="ALL">All Severities</option>
@@ -158,7 +180,10 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
           <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
             >
               <option value="ALL">All Audit Statuses</option>
@@ -166,6 +191,26 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
               <option value="IN_REVIEW">In Review</option>
               <option value="RESOLVED">Resolved</option>
               <option value="IGNORED">Ignored</option>
+            </select>
+          </div>
+
+          {/* Page Size Selector */}
+          <div className="flex items-center space-x-1 bg-white px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-xs text-slate-700">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                const val = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value);
+                setPageSize(val);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent focus:outline-none text-xs font-semibold cursor-pointer text-slate-700"
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+              <option value="ALL">Show All Records</option>
             </select>
           </div>
         </div>
@@ -204,14 +249,14 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
           </thead>
 
           <tbody className="divide-y divide-slate-100">
-            {filteredDiscrepancies.length === 0 ? (
+            {paginatedDiscrepancies.length === 0 ? (
               <tr>
                 <td colSpan={9} className="py-12 text-center text-slate-400">
                   No audit discrepancies match the selected filter criteria.
                 </td>
               </tr>
             ) : (
-              filteredDiscrepancies.map((item) => (
+              paginatedDiscrepancies.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
                   {/* Severity Badge */}
                   <td className="py-3.5 px-4 font-semibold">
@@ -301,13 +346,46 @@ export const DrillDownTable: React.FC<DrillDownTableProps> = ({
         </table>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          Showing <strong className="text-slate-800">{filteredDiscrepancies.length}</strong> of{' '}
-          <strong className="text-slate-800">{discrepancies.length}</strong> audit discrepancies
-        </span>
-        <span className="font-mono text-[11px]">Click "AI Audit Explainer" for transaction root cause</span>
+      {/* Footer Info & Pagination Controls */}
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+        <div>
+          Showing{' '}
+          <strong className="text-slate-800">
+            {pageSize === 'ALL'
+              ? totalItems
+              : Math.min((currentPage - 1) * pageSize + 1, totalItems)}
+          </strong>{' '}
+          to{' '}
+          <strong className="text-slate-800">
+            {pageSize === 'ALL' ? totalItems : Math.min(currentPage * pageSize, totalItems)}
+          </strong>{' '}
+          of <strong className="text-slate-800">{totalItems}</strong> audit discrepancies (Total dataset items: {discrepancies.length})
+        </div>
+
+        {/* Pagination Buttons */}
+        {pageSize !== 'ALL' && totalPages > 1 && (
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 bg-white border border-slate-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-all text-slate-700 shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <span className="text-xs font-semibold text-slate-700 font-mono px-2">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 bg-white border border-slate-300 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-all text-slate-700 shadow-sm"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
